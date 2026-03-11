@@ -25,6 +25,7 @@ Windows를 주요 타겟으로 하는 고성능 Git 클라이언트 프로젝트
 ## 주요 문서
 - [CRS](docs/requirements/CRS.md): 고객 요구사항 명세
 - [SRS](docs/requirements/SRS.md): 시스템 요구사항 명세
+- [Initial Design Specification](docs/design/initial-design-specification.md): Release 1 초기 설계 명세
 - [Initial Technical Architecture](docs/design/initial-technical-architecture.md): 초기 기술 아키텍처 초안
 - [GitKraken Feature Analysis](docs/design/gitkraken-feature-analysis.md): 참고 제품 기능 분석
 - [Thread Operating Guidelines](docs/thread-operating-guidelines.md): 현재 문서화 스레드 운영 규칙
@@ -42,6 +43,7 @@ Windows를 주요 타겟으로 하는 고성능 Git 클라이언트 프로젝트
 ## 버전 정책
 - 현재 기준 개발 버전은 `v0.0.1`이다.
 - 버전 번호는 사용자 지시가 있을 때만 올린다.
+- 모든 문서의 변경 이력은 프로젝트 개발 버전을 기준으로 기록한다.
 - 버전이 올라갈 때마다 아래 변경 이력을 함께 갱신한다.
 
 ## 변경 이력
@@ -49,6 +51,8 @@ Windows를 주요 타겟으로 하는 고성능 Git 클라이언트 프로젝트
 ### `v0.0.1` (개발 중)
 - 프로젝트 목표와 기술 제약을 `CRS`로 정리
 - 시스템 요구사항과 초기 구현 범위를 `SRS`로 정리
+- Release 1 초기 설계 명세 작성
 - 초기 기술 아키텍처 초안 작성
 - `GitKraken` 기반 기능 분석 문서 작성
 - 문서 작성용 스레드 운영 규칙 정리
+- 문서 변경 이력 표기를 개발 버전 기준으로 통일
