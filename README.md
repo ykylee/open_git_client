@@ -3,9 +3,9 @@
 Windows를 주요 타겟으로 하는 고성능 Git 클라이언트 프로젝트다. Linux에서도 동일 소스 트리를 빌드할 수 있도록 유지하며, Git 작업 속도와 UI 반응성을 최우선 목표로 둔다.
 
 ## 현재 상태
-- 현재 개발 버전: `v0.0.1`
-- 현재 단계: 요구사항 정의 및 초기 설계 정리
-- 구현 상태: 애플리케이션 코드는 아직 시작되지 않았고, 문서 중심으로 프로젝트 범위를 구체화하는 중
+- 현재 개발 버전: `v0.0.2`
+- 현재 단계: 초기 구현 착수 및 앱 골격 구성
+- 구현 상태: `Qt Widgets` 기반 메인 윈도우, 세션/유스케이스 골격, 임시 Git 백엔드, 기본 단위 테스트와 빌드 검증까지 완료
 
 ## 프로젝트 방향
 - 제품 유형: 데스크톱 Git 클라이언트
@@ -40,13 +40,30 @@ Windows를 주요 타겟으로 하는 고성능 Git 클라이언트 프로젝트
 - remote 관리와 `fetch`/`pull`/`push`
 - 검색, diff, file history, blame
 
+## 현재 구현된 내용
+- `CMake + Ninja + Qt 6` 기반 프로젝트 빌드 진입점 구성
+- `RepositorySession`, `TaskCoordinator`, `RepositoryUseCases` 중심의 Phase 1 런타임 골격 추가
+- 메인 윈도우, 사이드바, 커밋 그래프, 인스펙터, 작업 트리 패널의 초기 UI 스켈레톤 구현
+- 실제 Git 연동 전 단계로 사용할 in-memory Git backend 추가
+- `QtTest` 기반 단위 테스트 2종 추가 및 Linux 환경에서 configure/build/ctest 검증 완료
+
+## 빌드와 테스트
+```bash
+cmake -S . -B build -G Ninja
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
 ## 버전 정책
-- 현재 기준 개발 버전은 `v0.0.1`이다.
+- 현재 기준 개발 버전은 `v0.0.2`이다.
 - 버전 번호는 사용자 지시가 있을 때만 올린다.
 - 모든 문서의 변경 이력은 프로젝트 개발 버전을 기준으로 기록한다.
 - 버전이 올라갈 때마다 아래 변경 이력을 함께 갱신한다.
 
 ## 변경 이력
 
-### `v0.0.1` (개발 중)
+### `v0.0.2` (개발 중)
+- 2026-03-11: `Qt Widgets` 기반 초기 애플리케이션 골격, `RepositorySession`/`TaskCoordinator`/유스케이스 구조, in-memory Git backend, 단위 테스트와 Linux 빌드 검증을 추가하고 README에 현재 구현 상태와 빌드 방법을 반영했다.
+
+### `v0.0.1`
 - 2026-03-11: 프로젝트 개요와 버전 정책을 정리하고, `CRS`, `SRS`, 초기 설계 명세, 초기 기술 아키텍처, `GitKraken` 기능 분석, 스레드 운영 문서를 작성했으며 모든 문서의 변경 이력을 개발 버전 기준으로 통일했다.
