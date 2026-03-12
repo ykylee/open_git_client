@@ -66,6 +66,38 @@ sudo apt-get install -y \
   libgit2-dev
 ```
 
+## Windows 빌드 환경
+- 권장 운영체제: `Windows 10 (1809+)` 또는 `Windows 11`
+- 권장 컴파일러: `MinGW-w64`
+- 권장 Qt: `Qt 6.4.2` 이상, 반드시 `MinGW 64-bit` 키트로 설치
+- 필수 도구: `CMake`, `Ninja`, `Git`
+- 배포 도구: `windeployqt`
+
+권장 설치 순서:
+
+1. `MinGW-w64` 툴체인이 포함된 개발 환경을 준비한다.
+2. `Qt`를 설치할 때 `MinGW 64-bit`용 `Qt 6.4.2+`와 `Tools > Ninja`, `CMake` 사용 가능 환경을 준비한다.
+3. Qt가 제공하는 `MinGW 64-bit` 환경 프롬프트 또는 `mingw64` 컴파일러가 PATH에 잡힌 셸에서 빌드한다.
+4. `windeployqt`가 PATH에 없으면 Qt 설치 경로의 `bin` 디렉터리를 환경에 추가한다.
+
+Windows 빌드 예시:
+
+```bat
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+Windows 포터블 패키지 생성:
+
+```bat
+cmake --build build --target package_open_git_client_portable
+```
+
+- 일반 빌드 결과 앱 실행 파일은 `build/bin/OpenGitClient.exe`에 생성된다.
+- 포터블 패키지 폴더는 `build/package/OpenGitClient/`에 생성된다.
+- ZIP 파일은 `build/dist/OpenGitClient-<version>-Windows.zip` 형태로 생성된다.
+
 ## 빌드와 테스트
 ```bash
 cmake -S . -B build -G Ninja
