@@ -73,6 +73,12 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
+Linux에서 빌드 전 산출물 정리:
+
+```bash
+./scripts/clean_linux_build.sh
+```
+
 - 기본 앱 실행 파일 출력 경로: `build/bin/open_git_client`
 - 테스트 실행 파일 출력 경로: `build/tests/`
 
