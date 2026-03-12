@@ -1,0 +1,45 @@
+set(ogc_runtime_dependency_dirs "@OGC_RUNTIME_DEPENDENCY_DIRS@")
+set(ogc_fail_on_unresolved_runtime_dependencies "@OGC_FAIL_ON_UNRESOLVED_RUNTIME_DEPENDENCIES@")
+
+if(NOT DEFINED INPUT_FILE OR INPUT_FILE STREQUAL "")
+    message(FATAL_ERROR "INPUT_FILE must be provided to copy runtime dependencies.")
+endif()
+
+if(NOT DEFINED OUTPUT_DIR OR OUTPUT_DIR STREQUAL "")
+    message(FATAL_ERROR "OUTPUT_DIR must be provided to copy runtime dependencies.")
+endif()
+
+file(MAKE_DIRECTORY "${OUTPUT_DIR}")
+
+file(GET_RUNTIME_DEPENDENCIES
+    EXECUTABLES "${INPUT_FILE}"
+    RESOLVED_DEPENDENCIES_VAR ogc_resolved_dependencies
+    UNRESOLVED_DEPENDENCIES_VAR ogc_unresolved_dependencies
+    DIRECTORIES ${ogc_runtime_dependency_dirs}
+    PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
+    POST_EXCLUDE_REGEXES ".*[Ww]indows[\\\\/][Ss]ystem32[\\\\/].*"
+)
+
+foreach(ogc_dependency IN LISTS ogc_resolved_dependencies)
+    get_filename_component(ogc_dependency_name "${ogc_dependency}" NAME)
+    file(COPY_FILE
+        "${ogc_dependency}"
+        "${OUTPUT_DIR}/${ogc_dependency_name}"
+        ONLY_IF_DIFFERENT
+    )
+endforeach()
+
+if(ogc_unresolved_dependencies)
+    list(JOIN ogc_unresolved_dependencies ", " ogc_unresolved_dependencies_joined)
+    if(ogc_fail_on_unresolved_runtime_dependencies)
+        message(FATAL_ERROR
+            "Some runtime dependencies for ${INPUT_FILE} could not be resolved: "
+            "${ogc_unresolved_dependencies_joined}"
+        )
+    else()
+        message(WARNING
+            "Some runtime dependencies for ${INPUT_FILE} could not be resolved: "
+            "${ogc_unresolved_dependencies_joined}"
+        )
+    endif()
+endif()

@@ -20,6 +20,49 @@ set(OGC_PORTABLE_ARCHIVE "${OGC_DIST_DIR}/${OGC_PORTABLE_DIR_NAME}-${PROJECT_VER
 find_package(wxWidgets REQUIRED COMPONENTS core base)
 include("${wxWidgets_USE_FILE}")
 
+set(OGC_FAIL_ON_UNRESOLVED_RUNTIME_DEPENDENCIES ON CACHE BOOL
+    "Fail the build when runtime DLL discovery misses a non-system dependency."
+)
+
+macro(ogc_append_runtime_dependency_dir dir_path)
+    if(dir_path AND IS_DIRECTORY "${dir_path}")
+        list(APPEND OGC_RUNTIME_DEPENDENCY_DIRS "${dir_path}")
+    endif()
+endmacro()
+
+set(OGC_RUNTIME_DEPENDENCY_DIRS "")
+foreach(ogc_wx_library_dir IN LISTS wxWidgets_LIBRARY_DIRS)
+    ogc_append_runtime_dependency_dir("${ogc_wx_library_dir}")
+    get_filename_component(ogc_wx_library_parent_dir "${ogc_wx_library_dir}" DIRECTORY)
+    ogc_append_runtime_dependency_dir("${ogc_wx_library_parent_dir}/bin")
+endforeach()
+
+if(DEFINED wxWidgets_ROOT_DIR)
+    ogc_append_runtime_dependency_dir("${wxWidgets_ROOT_DIR}/bin")
+endif()
+
+foreach(ogc_wx_library IN LISTS wxWidgets_LIBRARIES)
+    if(IS_ABSOLUTE "${ogc_wx_library}")
+        get_filename_component(ogc_wx_library_dir "${ogc_wx_library}" DIRECTORY)
+        ogc_append_runtime_dependency_dir("${ogc_wx_library_dir}")
+        get_filename_component(ogc_wx_library_parent_dir "${ogc_wx_library_dir}" DIRECTORY)
+        ogc_append_runtime_dependency_dir("${ogc_wx_library_parent_dir}/bin")
+    endif()
+endforeach()
+
+get_filename_component(OGC_CXX_COMPILER_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
+ogc_append_runtime_dependency_dir("${OGC_CXX_COMPILER_DIR}")
+list(REMOVE_DUPLICATES OGC_RUNTIME_DEPENDENCY_DIRS)
+
+set(OGC_COPY_RUNTIME_DEPENDENCIES_SCRIPT
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake/CopyRuntimeDependencies.cmake"
+)
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/CopyRuntimeDependencies.cmake.in"
+    "${OGC_COPY_RUNTIME_DEPENDENCIES_SCRIPT}"
+    @ONLY
+)
+
 add_library(ogc_core STATIC
     src/app/application_bootstrap.cpp
     src/application/common/repository_session.cpp
@@ -36,6 +79,7 @@ target_include_directories(ogc_core
 
 add_executable(open_git_client
     src/app/main.cpp
+    src/ui/commit_graph/commit_graph_view.cpp
     src/ui/main_window/main_window.cpp
 )
 
@@ -50,6 +94,17 @@ target_link_libraries(open_git_client
         ogc_core
         ${wxWidgets_LIBRARIES}
 )
+
+if(WIN32)
+    add_custom_command(TARGET open_git_client POST_BUILD
+        COMMAND "${CMAKE_COMMAND}"
+            -DINPUT_FILE="$<TARGET_FILE:open_git_client>"
+            -DOUTPUT_DIR="$<TARGET_FILE_DIR:open_git_client>"
+            -P "${OGC_COPY_RUNTIME_DEPENDENCIES_SCRIPT}"
+        COMMENT "Copying runtime DLLs beside OpenGitClient.exe"
+        VERBATIM
+    )
+endif()
 
 install(TARGETS open_git_client
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
