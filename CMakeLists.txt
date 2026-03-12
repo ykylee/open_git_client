@@ -64,11 +64,19 @@ install(TARGETS open_git_client
     BUNDLE DESTINATION "."
 )
 
-qt_generate_deploy_app_script(
-    TARGET open_git_client
-    OUTPUT_SCRIPT open_git_client_deploy_script
-    NO_UNSUPPORTED_PLATFORM_ERROR
-)
+if(Qt6_VERSION VERSION_LESS 6.5.0)
+    qt_generate_deploy_app_script(
+        TARGET open_git_client
+        FILENAME_VARIABLE open_git_client_deploy_script
+        NO_UNSUPPORTED_PLATFORM_ERROR
+    )
+else()
+    qt_generate_deploy_app_script(
+        TARGET open_git_client
+        OUTPUT_SCRIPT open_git_client_deploy_script
+        NO_UNSUPPORTED_PLATFORM_ERROR
+    )
+endif()
 
 install(SCRIPT "${open_git_client_deploy_script}")
 
