@@ -73,6 +73,28 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
+- 기본 앱 실행 파일 출력 경로: `build/bin/open_git_client`
+- 테스트 실행 파일 출력 경로: `build/tests/`
+
+배포용 런타임 번들 정리:
+
+```bash
+cmake --build build --target bundle_open_git_client
+```
+
+- 일반 빌드 결과 앱 실행 파일은 `build/bin/open_git_client`에 생성된다.
+- 배포 번들 타깃은 실행 파일과 런타임 의존성을 `build/package/OpenGitClient/bin` 기준으로 정리한다.
+
+포터블 배포 폴더를 ZIP까지 한 번에 만들기:
+
+```bash
+cmake --build build --target package_open_git_client_portable
+```
+
+- 이 타깃은 먼저 `build/package/OpenGitClient/` 폴더를 구성한다.
+- 그 다음 `build/dist/OpenGitClient-<version>-<platform>.zip` 파일을 생성한다.
+- Windows에서는 이 `OpenGitClient` 폴더만 복사해도 바로 실행 가능한 포터블 배포 형태를 목표로 한다.
+
 ## 버전 정책
 - 현재 기준 개발 버전은 `v0.0.2`이다.
 - 버전 번호는 사용자 지시가 있을 때만 올린다.
