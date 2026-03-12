@@ -19,7 +19,7 @@ Windows를 주요 타겟으로 하는 고성능 Git 클라이언트 프로젝트
 - UI: `Qt 6` (`Qt Widgets` 우선)
 - 빌드: `CMake + Ninja`
 - Git 연동: `libgit2` 중심, 필요 시 네이티브 `git` CLI 병행
-- Windows 개발 환경: `MSVC 2022`
+- Windows 개발 환경: `MinGW-w64`
 - Linux 빌드 환경: `GCC` 또는 `Clang`
 
 ## 주요 문서
@@ -145,6 +145,7 @@ cmake --build build --target package_open_git_client_portable
 
 ### `v0.0.2` (개발 중)
 - 2026-03-11: `Qt Widgets` 기반 초기 애플리케이션 골격, `RepositorySession`/`TaskCoordinator`/유스케이스 구조, in-memory Git backend, 단위 테스트와 Linux 빌드 검증을 추가하고 README에 현재 구현 상태와 빌드 방법을 반영했다.
+- 2026-03-12: 포터블 패키징, Linux 클린 빌드 스크립트, Qt 6.4 호환 설정, Windows `MinGW-w64` 빌드 가이드를 반영하고 프로젝트 문서의 Windows 개발 환경 표기를 현재 방향에 맞춰 정리했다.
 
 ### `v0.0.1`
 - 2026-03-11: 프로젝트 개요와 버전 정책을 정리하고, `CRS`, `SRS`, 초기 설계 명세, 초기 기술 아키텍처, `GitKraken` 기능 분석, 스레드 운영 문서를 작성했으며 모든 문서의 변경 이력을 개발 버전 기준으로 통일했다.
