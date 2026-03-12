@@ -67,6 +67,36 @@ sudo apt-get install -y \
   libgit2-dev
 ```
 
+## macOS 빌드 환경
+- 권장 운영체제: `macOS 14+`
+- 권장 아키텍처: `Apple Silicon` 또는 `Intel`
+- 필수 도구: `Xcode`, `Homebrew`
+- Homebrew 패키지: `cmake`, `ninja`, `pkg-config`, `wxwidgets`
+
+macOS 준비 스크립트:
+
+```bash
+./scripts/setup_macos_build_env.sh
+```
+
+수동 설치 예시:
+
+```bash
+/opt/homebrew/bin/brew install cmake ninja pkg-config wxwidgets
+```
+
+macOS 빌드 예시:
+
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+- Homebrew 경로가 셸 PATH에 없으면 `eval "$(/opt/homebrew/bin/brew shellenv)"`를 먼저 적용한다.
+- `wxWidgets` 탐색이 필요한 경우 `CMAKE_PREFIX_PATH="$(brew --prefix wxwidgets)"`를 함께 지정한다.
+- 현재 구현 단계에서는 `libgit2`를 아직 링크하지 않으므로 macOS 초기 빌드에는 `wxwidgets`만으로 충분하다.
+
 ## Windows 빌드 환경
 - 권장 운영체제: `Windows 10 (1809+)` 또는 `Windows 11`
 - 권장 컴파일러: `MinGW-w64`
@@ -88,6 +118,9 @@ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
+
+- Windows에서는 일반 빌드 후 `build/bin/OpenGitClient.exe` 옆으로 필요한 런타임 DLL을 자동 복사한다.
+- 따라서 `build/bin/` 폴더만 옮겨도 기본 실행 검증이 가능하도록 맞춘다.
 
 Windows 포터블 패키지 생성:
 
@@ -149,6 +182,7 @@ cmake --build build --target package_open_git_client_portable
 - 2026-03-11: 초기 애플리케이션 골격, `RepositorySession`/`TaskCoordinator`/유스케이스 구조, in-memory Git backend, 단위 테스트와 Linux 빌드 검증 구조를 추가하고 README에 현재 구현 상태와 빌드 방법을 반영했다.
 - 2026-03-12: 포터블 패키징, Linux 클린 빌드 스크립트, Windows `MinGW-w64` 빌드 가이드, 그리고 `wxWidgets` 기반 프레임워크 전환 방향을 반영해 프로젝트 문서와 빌드 안내를 정리했다.
 - 2026-03-12: `wxWidgets 3.2.8` 설치 환경에서 Linux `configure`, `build`, `ctest`, 포터블 패키징 검증을 완료하고 README의 현재 상태와 의존성 정보를 갱신했다.
+- 2026-03-12: macOS 로컬 개발을 위해 Homebrew 기반 준비 절차와 빌드 안내, 그리고 환경 설정 스크립트를 추가했다.
 
 ### `v0.0.1`
 - 2026-03-11: 프로젝트 개요와 버전 정책을 정리하고, `CRS`, `SRS`, 초기 설계 명세, 초기 기술 아키텍처, `GitKraken` 기능 분석, 스레드 운영 문서를 작성했으며 모든 문서의 변경 이력을 개발 버전 기준으로 통일했다.

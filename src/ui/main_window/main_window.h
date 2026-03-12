@@ -2,6 +2,7 @@
 
 #include "application/common/repository_session.h"
 #include "application/repository/repository_use_cases.h"
+#include "ui/commit_graph/commit_graph_view.h"
 
 #include <wx/frame.h>
 
@@ -37,7 +38,7 @@ private:
     wxStaticText* repositoryTitle_ = nullptr;
     wxStaticText* repositoryStatus_ = nullptr;
     wxListBox* repositoryList_ = nullptr;
-    wxTreeCtrl* graphView_ = nullptr;
+    CommitGraphView* graphView_ = nullptr;
     wxNotebook* inspectorTabs_ = nullptr;
     wxTextCtrl* inspectorDetails_ = nullptr;
     wxTreeCtrl* workingTreeView_ = nullptr;

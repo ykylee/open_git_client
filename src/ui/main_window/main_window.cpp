@@ -13,7 +13,7 @@
 #include <wx/utils.h>
 
 #include <filesystem>
-#include <sstream>
+#include <utility>
 
 namespace ogc::ui {
 
@@ -21,17 +21,6 @@ namespace {
 
 wxString toWxString(const std::string& value) {
     return wxString::FromUTF8(value);
-}
-
-std::string joinReferenceNames(const std::vector<domain::ReferenceLabel>& refs) {
-    std::ostringstream stream;
-    for (std::size_t index = 0; index < refs.size(); ++index) {
-        if (index > 0) {
-            stream << ", ";
-        }
-        stream << refs[index].name;
-    }
-    return stream.str();
 }
 
 enum class CommandId {
@@ -109,9 +98,7 @@ void MainWindow::setupUi() {
     sidebarSizer->Add(repositoryList_, 1, wxALL | wxEXPAND, 12);
     sidebar->SetSizer(sidebarSizer);
 
-    graphView_ = new wxTreeCtrl(
-        mainPane, wxID_ANY, wxDefaultPosition, wxDefaultSize,
-        wxTR_HAS_BUTTONS | wxTR_LINES_AT_ROOT | wxTR_DEFAULT_STYLE);
+    graphView_ = new CommitGraphView(mainPane);
 
     auto* inspectorPanel = new wxPanel(detailPane, wxID_ANY);
     auto* inspectorSizer = new wxBoxSizer(wxVERTICAL);
@@ -160,19 +147,7 @@ void MainWindow::setupToolbar() {
 }
 
 void MainWindow::populateGraph() {
-    graphView_->DeleteAllItems();
-    const auto root = graphView_->AddRoot("Commit Graph");
-
-    const auto& graph = activeSession_->snapshot().graph;
-    for (const auto& commit : graph) {
-        const auto label =
-            "|" + std::to_string(commit.graphLane) + "  " + commit.shortOid + "  " + commit.summary;
-        const auto item = graphView_->AppendItem(root, toWxString(label));
-        graphView_->AppendItem(item, toWxString("Author: " + commit.authorName));
-        graphView_->AppendItem(item, toWxString("Refs: " + joinReferenceNames(commit.refs)));
-    }
-
-    graphView_->ExpandAll();
+    graphView_->setGraph(activeSession_->snapshot().graph);
 }
 
 void MainWindow::populateWorkingTree() {

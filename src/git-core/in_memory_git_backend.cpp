@@ -30,6 +30,7 @@ domain::CommitNode makeCommitNode(
     std::string shortOid,
     std::string summary,
     std::string authorTime,
+    std::vector<std::string> parents,
     std::vector<domain::ReferenceLabel> refs,
     int graphLane,
     bool isMergeCommit = false) {
@@ -40,6 +41,7 @@ domain::CommitNode makeCommitNode(
     node.authorName = "Open Git Client";
     node.authorEmail = "dev@local";
     node.authorTime = std::move(authorTime);
+    node.parents = std::move(parents);
     node.refs = std::move(refs);
     node.graphLane = graphLane;
     node.isMergeCommit = isMergeCommit;
@@ -80,15 +82,50 @@ domain::RepositorySnapshot InMemoryGitBackend::buildSnapshot(const std::string& 
             "3d4f7ac",
             "Bootstrap wxWidgets application shell",
             refreshedAt,
+            {"91ac6c239f40db5462ae9a28bb37c2b6a6af3a72"},
             {domain::ReferenceLabel{"HEAD", "head", false, true, "accent"},
              domain::ReferenceLabel{"codeserver", "branch", false, false, "primary"}},
             0),
         makeCommitNode(
-            "024f00174bc0c4d5c7d278f31f3812fc6ffd1172",
-            "024f001",
+            "91ac6c239f40db5462ae9a28bb37c2b6a6af3a72",
+            "91ac6c2",
+            "Merge branch 'feature/graph-panel'",
+            refreshedAt,
+            {"bb71c29acc95f2a9ac0b23f14ce81abf0df7f0a8", "7ceaa01953d76e33c19f60f82211ca22c7dd44be"},
+            {domain::ReferenceLabel{"origin/dev", "remote", true, false, "neutral"}},
+            0,
+            true),
+        makeCommitNode(
+            "7ceaa01953d76e33c19f60f82211ca22c7dd44be",
+            "7ceaa01",
+            "Prototype commit graph canvas",
+            refreshedAt,
+            {"4a136f7199a78086b99499975fba6658cbe4e0af"},
+            {domain::ReferenceLabel{"feature/graph-panel", "branch", false, false, "warning"}},
+            1),
+        makeCommitNode(
+            "bb71c29acc95f2a9ac0b23f14ce81abf0df7f0a8",
+            "bb71c29",
             "Import initial design documents",
             refreshedAt,
-            {domain::ReferenceLabel{"origin/dev", "remote", true, false, "neutral"}},
+            {"4a136f7199a78086b99499975fba6658cbe4e0af"},
+            {},
+            0),
+        makeCommitNode(
+            "4a136f7199a78086b99499975fba6658cbe4e0af",
+            "4a136f7",
+            "Seed repository navigation skeleton",
+            refreshedAt,
+            {"024f00174bc0c4d5c7d278f31f3812fc6ffd1172"},
+            {},
+            0),
+        makeCommitNode(
+            "024f00174bc0c4d5c7d278f31f3812fc6ffd1172",
+            "024f001",
+            "Initialize Open Git Client repository",
+            refreshedAt,
+            {},
+            {domain::ReferenceLabel{"v0.0.1", "tag", false, false, "neutral"}},
             0)
     };
 
