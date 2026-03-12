@@ -50,7 +50,9 @@ qt_add_executable(open_git_client
 )
 
 set_target_properties(open_git_client PROPERTIES
+    OUTPUT_NAME "OpenGitClient"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    WIN32_EXECUTABLE TRUE
 )
 
 target_link_libraries(open_git_client
@@ -64,29 +66,57 @@ install(TARGETS open_git_client
     BUNDLE DESTINATION "."
 )
 
-if(Qt6_VERSION VERSION_LESS 6.5.0)
-    qt_generate_deploy_app_script(
-        TARGET open_git_client
-        FILENAME_VARIABLE open_git_client_deploy_script
-        NO_UNSUPPORTED_PLATFORM_ERROR
+if(WIN32)
+    find_program(OGC_WINDEPLOYQT_EXECUTABLE
+        NAMES windeployqt windeployqt6
+        HINTS "${QT6_INSTALL_PREFIX}/${QT6_INSTALL_BINS}"
+    )
+
+    if(NOT OGC_WINDEPLOYQT_EXECUTABLE)
+        message(FATAL_ERROR "windeployqt was not found. Check the Qt installation on this machine.")
+    endif()
+
+    add_custom_target(bundle_open_git_client
+        COMMAND "${CMAKE_COMMAND}" -E rm -rf "${CMAKE_BINARY_DIR}/package"
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "${OGC_PACKAGE_ROOT}/bin"
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "$<TARGET_FILE:open_git_client>"
+            "${OGC_PACKAGE_ROOT}/bin/$<TARGET_FILE_NAME:open_git_client>"
+        COMMAND "${OGC_WINDEPLOYQT_EXECUTABLE}"
+            --dir "${OGC_PACKAGE_ROOT}/bin"
+            --no-translations
+            "${OGC_PACKAGE_ROOT}/bin/$<TARGET_FILE_NAME:open_git_client>"
+        DEPENDS open_git_client
+        USES_TERMINAL
+        COMMENT "Bundling deployable Open Git Client runtime into ${OGC_PACKAGE_ROOT}/bin"
     )
 else()
-    qt_generate_deploy_app_script(
-        TARGET open_git_client
-        OUTPUT_SCRIPT open_git_client_deploy_script
-        NO_UNSUPPORTED_PLATFORM_ERROR
+    if(Qt6_VERSION VERSION_LESS 6.5.0)
+        qt_generate_deploy_app_script(
+            TARGET open_git_client
+            FILENAME_VARIABLE open_git_client_deploy_script
+            NO_TRANSLATIONS
+            NO_UNSUPPORTED_PLATFORM_ERROR
+        )
+    else()
+        qt_generate_deploy_app_script(
+            TARGET open_git_client
+            OUTPUT_SCRIPT open_git_client_deploy_script
+            NO_TRANSLATIONS
+            NO_UNSUPPORTED_PLATFORM_ERROR
+        )
+    endif()
+
+    install(SCRIPT "${open_git_client_deploy_script}")
+
+    add_custom_target(bundle_open_git_client
+        COMMAND "${CMAKE_COMMAND}" -E rm -rf "${CMAKE_BINARY_DIR}/package"
+        COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --prefix "${OGC_PACKAGE_ROOT}"
+        DEPENDS open_git_client
+        USES_TERMINAL
+        COMMENT "Bundling deployable Open Git Client runtime into ${OGC_PACKAGE_ROOT}/bin"
     )
 endif()
-
-install(SCRIPT "${open_git_client_deploy_script}")
-
-add_custom_target(bundle_open_git_client
-    COMMAND "${CMAKE_COMMAND}" -E rm -rf "${CMAKE_BINARY_DIR}/package"
-    COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --prefix "${OGC_PACKAGE_ROOT}"
-    DEPENDS open_git_client
-    USES_TERMINAL
-    COMMENT "Bundling deployable Open Git Client runtime into ${OGC_PACKAGE_ROOT}/bin"
-)
 
 add_custom_target(package_open_git_client_portable
     COMMAND "${CMAKE_COMMAND}" -E rm -rf "${OGC_DIST_DIR}"

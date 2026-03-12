@@ -79,7 +79,7 @@ Linux에서 빌드 전 산출물 정리:
 ./scripts/clean_linux_build.sh
 ```
 
-- 기본 앱 실행 파일 출력 경로: `build/bin/open_git_client`
+- 기본 앱 실행 파일 출력 경로: `build/bin/OpenGitClient` (`Windows`에서는 `OpenGitClient.exe`)
 - 테스트 실행 파일 출력 경로: `build/tests/`
 
 배포용 런타임 번들 정리:
@@ -88,8 +88,10 @@ Linux에서 빌드 전 산출물 정리:
 cmake --build build --target bundle_open_git_client
 ```
 
-- 일반 빌드 결과 앱 실행 파일은 `build/bin/open_git_client`에 생성된다.
+- 일반 빌드 결과 앱 실행 파일은 `build/bin/OpenGitClient`에 생성된다.
 - 배포 번들 타깃은 실행 파일과 런타임 의존성을 `build/package/OpenGitClient/bin` 기준으로 정리한다.
+- Windows에서는 `windeployqt` 기반으로 포터블 폴더를 구성한다.
+- Linux에서는 Qt deploy script 기반으로 포터블 폴더를 구성한다.
 
 포터블 배포 폴더를 ZIP까지 한 번에 만들기:
 
