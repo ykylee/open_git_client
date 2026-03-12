@@ -50,6 +50,7 @@ Windows를 주요 타겟으로 하는 고성능 Git 클라이언트 프로젝트
 ## 빌드 의존성
 - 필수 도구: `build-essential`, `cmake`, `ninja-build`, `pkg-config`
 - 필수 라이브러리: `qt6-base-dev`, `libgit2-dev`
+- 최소 지원 Qt 버전: `6.4.2`
 - 현재 Linux 검증 기준 버전: `Qt 6.9.2`, `libgit2 1.9.0`
 
 Ubuntu 기준 설치 예시:
