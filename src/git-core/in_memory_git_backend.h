@@ -6,11 +6,11 @@ namespace ogc::git {
 
 class InMemoryGitBackend final : public GitBackend {
 public:
-    [[nodiscard]] domain::RepositorySnapshot openRepository(const QString& repoPath) override;
-    [[nodiscard]] domain::RepositorySnapshot refreshRepository(const QString& repoPath) override;
+    [[nodiscard]] domain::RepositorySnapshot openRepository(const std::string& repoPath) override;
+    [[nodiscard]] domain::RepositorySnapshot refreshRepository(const std::string& repoPath) override;
 
 private:
-    [[nodiscard]] domain::RepositorySnapshot buildSnapshot(const QString& repoPath) const;
+    [[nodiscard]] domain::RepositorySnapshot buildSnapshot(const std::string& repoPath) const;
 };
 
 }  // namespace ogc::git

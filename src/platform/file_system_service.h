@@ -1,12 +1,12 @@
 #pragma once
 
-#include <QString>
+#include <string>
 
 namespace ogc::platform {
 
 class FileSystemService {
 public:
-    [[nodiscard]] static QString displayNameForPath(const QString& path);
+    [[nodiscard]] static std::string displayNameForPath(const std::string& path);
 };
 
 }  // namespace ogc::platform

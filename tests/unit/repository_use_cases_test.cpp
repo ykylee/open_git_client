@@ -1,47 +1,44 @@
 #include "application/repository/repository_use_cases.h"
 #include "git-core/in_memory_git_backend.h"
 
-#include <QSignalSpy>
-#include <QtTest/QtTest>
+#include <cstdlib>
+#include <iostream>
+#include <string>
 
-namespace ogc::tests {
+namespace {
 
-class RepositoryUseCasesTest : public QObject {
-    Q_OBJECT
+void expect(bool condition, const std::string& message) {
+    if (!condition) {
+        std::cerr << message << '\n';
+        std::exit(1);
+    }
+}
 
-private slots:
-    void openRepositoryCreatesInitializedSession();
-    void refreshRepositoryUpdatesSessionAndEmitsSignal();
-};
+}  // namespace
 
-void RepositoryUseCasesTest::openRepositoryCreatesInitializedSession() {
-    git::InMemoryGitBackend backend;
-    application::RepositoryUseCases useCases(backend);
+int main() {
+    ogc::git::InMemoryGitBackend backend;
+    ogc::application::RepositoryUseCases useCases(backend);
 
     const auto session = useCases.openRepository("/tmp/open_git_client");
 
-    QVERIFY(session != nullptr);
-    QCOMPARE(session->repoPath(), QString("/tmp/open_git_client"));
-    QCOMPARE(session->snapshot().summary.currentBranch, QString("codeserver"));
-    QVERIFY(!session->snapshot().graph.empty());
-    QVERIFY(!session->snapshot().workingTree.empty());
+    expect(session != nullptr, "session was not created");
+    expect(session->repoPath() == "/tmp/open_git_client", "repo path mismatch");
+    expect(session->snapshot().summary.currentBranch == "codeserver", "branch mismatch");
+    expect(!session->snapshot().graph.empty(), "graph should not be empty");
+    expect(!session->snapshot().workingTree.empty(), "working tree should not be empty");
+
+    bool snapshotChanged = false;
+    auto refreshSession = useCases.openRepository("/tmp/open_git_client");
+    refreshSession->setSnapshotChangedCallback([&]() {
+        snapshotChanged = true;
+    });
+
+    useCases.refreshRepository(*refreshSession);
+
+    expect(snapshotChanged, "refresh did not report snapshot update");
+    expect(refreshSession->snapshot().state.currentOperation == "idle", "operation state mismatch");
+    expect(refreshSession->snapshot().summary.displayName == "open_git_client", "display name mismatch");
+
+    return 0;
 }
-
-void RepositoryUseCasesTest::refreshRepositoryUpdatesSessionAndEmitsSignal() {
-    git::InMemoryGitBackend backend;
-    application::RepositoryUseCases useCases(backend);
-    auto session = useCases.openRepository("/tmp/open_git_client");
-    QSignalSpy snapshotSpy(session.get(), &application::RepositorySession::snapshotChanged);
-
-    useCases.refreshRepository(*session);
-
-    QCOMPARE(snapshotSpy.count(), 1);
-    QCOMPARE(session->snapshot().state.currentOperation, QString("idle"));
-    QCOMPARE(session->snapshot().summary.displayName, QString("open_git_client"));
-}
-
-}  // namespace ogc::tests
-
-QTEST_MAIN(ogc::tests::RepositoryUseCasesTest)
-
-#include "repository_use_cases_test.moc"

@@ -2,13 +2,11 @@
 
 namespace ogc::application {
 
-RepositorySession::RepositorySession(QString repoPath, QObject* parent)
-    : QObject(parent),
-      repoPath_(std::move(repoPath)),
-      taskCoordinator_(this) {
+RepositorySession::RepositorySession(std::string repoPath)
+    : repoPath_(std::move(repoPath)) {
 }
 
-const QString& RepositorySession::repoPath() const {
+const std::string& RepositorySession::repoPath() const {
     return repoPath_;
 }
 
@@ -22,7 +20,13 @@ TaskCoordinator& RepositorySession::taskCoordinator() {
 
 void RepositorySession::setSnapshot(domain::RepositorySnapshot snapshot) {
     snapshot_ = std::move(snapshot);
-    emit snapshotChanged();
+    if (snapshotChangedCallback_) {
+        snapshotChangedCallback_();
+    }
+}
+
+void RepositorySession::setSnapshotChangedCallback(SnapshotObserver callback) {
+    snapshotChangedCallback_ = std::move(callback);
 }
 
 }  // namespace ogc::application

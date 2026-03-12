@@ -6,7 +6,7 @@ RepositoryUseCases::RepositoryUseCases(git::GitBackend& gitBackend)
     : gitBackend_(gitBackend) {
 }
 
-std::unique_ptr<RepositorySession> RepositoryUseCases::openRepository(const QString& repoPath) const {
+std::unique_ptr<RepositorySession> RepositoryUseCases::openRepository(const std::string& repoPath) const {
     auto session = std::make_unique<RepositorySession>(repoPath);
     session->taskCoordinator().runRead(repoPath, [&]() {
         session->setSnapshot(gitBackend_.openRepository(repoPath));

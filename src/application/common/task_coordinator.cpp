@@ -2,20 +2,32 @@
 
 namespace ogc::application {
 
-TaskCoordinator::TaskCoordinator(QObject* parent)
-    : QObject(parent) {
+void TaskCoordinator::setTaskStartedCallback(TaskObserver callback) {
+    taskStartedCallback_ = std::move(callback);
 }
 
-void TaskCoordinator::runRead(const QString& repoPath, std::function<void()> task) {
-    emit taskStarted(repoPath, "read");
-    task();
-    emit taskFinished(repoPath, "read");
+void TaskCoordinator::setTaskFinishedCallback(TaskObserver callback) {
+    taskFinishedCallback_ = std::move(callback);
 }
 
-void TaskCoordinator::runWrite(const QString& repoPath, std::function<void()> task) {
-    emit taskStarted(repoPath, "write");
+void TaskCoordinator::runRead(const std::string& repoPath, std::function<void()> task) {
+    if (taskStartedCallback_) {
+        taskStartedCallback_(repoPath, "read");
+    }
     task();
-    emit taskFinished(repoPath, "write");
+    if (taskFinishedCallback_) {
+        taskFinishedCallback_(repoPath, "read");
+    }
+}
+
+void TaskCoordinator::runWrite(const std::string& repoPath, std::function<void()> task) {
+    if (taskStartedCallback_) {
+        taskStartedCallback_(repoPath, "write");
+    }
+    task();
+    if (taskFinishedCallback_) {
+        taskFinishedCallback_(repoPath, "write");
+    }
 }
 
 }  // namespace ogc::application

@@ -1,55 +1,57 @@
 #include "application/common/task_coordinator.h"
 
-#include <QSignalSpy>
-#include <QtTest/QtTest>
+#include <cstdlib>
+#include <iostream>
+#include <string>
 
-namespace ogc::tests {
+namespace {
 
-class TaskCoordinatorTest : public QObject {
-    Q_OBJECT
+void expect(bool condition, const std::string& message) {
+    if (!condition) {
+        std::cerr << message << '\n';
+        std::exit(1);
+    }
+}
 
-private slots:
-    void runReadEmitsLifecycleSignals();
-    void runWriteEmitsLifecycleSignals();
-};
+}  // namespace
 
-void TaskCoordinatorTest::runReadEmitsLifecycleSignals() {
-    application::TaskCoordinator coordinator;
-    QSignalSpy startedSpy(&coordinator, &application::TaskCoordinator::taskStarted);
-    QSignalSpy finishedSpy(&coordinator, &application::TaskCoordinator::taskFinished);
+int main() {
+    ogc::application::TaskCoordinator coordinator;
+
+    std::string startedRepo;
+    std::string startedLane;
+    std::string finishedRepo;
+    std::string finishedLane;
     bool executed = false;
+
+    coordinator.setTaskStartedCallback([&](const std::string& repoPath, const std::string& lane) {
+        startedRepo = repoPath;
+        startedLane = lane;
+    });
+    coordinator.setTaskFinishedCallback([&](const std::string& repoPath, const std::string& lane) {
+        finishedRepo = repoPath;
+        finishedLane = lane;
+    });
 
     coordinator.runRead("/tmp/repo", [&]() {
         executed = true;
     });
 
-    QCOMPARE(startedSpy.count(), 1);
-    QCOMPARE(finishedSpy.count(), 1);
-    QVERIFY(executed);
-    QCOMPARE(startedSpy.at(0).at(0).toString(), QString("/tmp/repo"));
-    QCOMPARE(startedSpy.at(0).at(1).toString(), QString("read"));
-    QCOMPARE(finishedSpy.at(0).at(1).toString(), QString("read"));
-}
+    expect(executed, "read task was not executed");
+    expect(startedRepo == "/tmp/repo", "read task started repo mismatch");
+    expect(startedLane == "read", "read task started lane mismatch");
+    expect(finishedRepo == "/tmp/repo", "read task finished repo mismatch");
+    expect(finishedLane == "read", "read task finished lane mismatch");
 
-void TaskCoordinatorTest::runWriteEmitsLifecycleSignals() {
-    application::TaskCoordinator coordinator;
-    QSignalSpy startedSpy(&coordinator, &application::TaskCoordinator::taskStarted);
-    QSignalSpy finishedSpy(&coordinator, &application::TaskCoordinator::taskFinished);
-    bool executed = false;
+    executed = false;
 
     coordinator.runWrite("/tmp/repo", [&]() {
         executed = true;
     });
 
-    QCOMPARE(startedSpy.count(), 1);
-    QCOMPARE(finishedSpy.count(), 1);
-    QVERIFY(executed);
-    QCOMPARE(startedSpy.at(0).at(1).toString(), QString("write"));
-    QCOMPARE(finishedSpy.at(0).at(1).toString(), QString("write"));
+    expect(executed, "write task was not executed");
+    expect(startedLane == "write", "write task started lane mismatch");
+    expect(finishedLane == "write", "write task finished lane mismatch");
+
+    return 0;
 }
-
-}  // namespace ogc::tests
-
-QTEST_MAIN(ogc::tests::TaskCoordinatorTest)
-
-#include "task_coordinator_test.moc"

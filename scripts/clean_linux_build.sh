@@ -17,7 +17,16 @@ removed_any=0
 for path in "${paths[@]}"; do
   if [[ -e "${path}" ]]; then
     echo "Removing ${path}"
-    rm -rf "${path}"
+    if [[ -d "${path}" ]]; then
+      find "${path}" -mindepth 1 -depth -exec rm -rf {} + 2>/dev/null || true
+    fi
+    rm -rf "${path}" 2>/dev/null || true
+
+    if [[ -e "${path}" ]]; then
+      echo "Failed to remove ${path}" >&2
+      exit 1
+    fi
+
     removed_any=1
   fi
 done

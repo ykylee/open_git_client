@@ -1,24 +1,23 @@
 #pragma once
 
-#include <QObject>
-#include <QString>
-
 #include <functional>
+#include <string>
 
 namespace ogc::application {
 
-class TaskCoordinator final : public QObject {
-    Q_OBJECT
-
+class TaskCoordinator final {
 public:
-    explicit TaskCoordinator(QObject* parent = nullptr);
+    using TaskObserver = std::function<void(const std::string&, const std::string&)>;
 
-    void runRead(const QString& repoPath, std::function<void()> task);
-    void runWrite(const QString& repoPath, std::function<void()> task);
+    void setTaskStartedCallback(TaskObserver callback);
+    void setTaskFinishedCallback(TaskObserver callback);
 
-signals:
-    void taskStarted(const QString& repoPath, const QString& lane);
-    void taskFinished(const QString& repoPath, const QString& lane);
+    void runRead(const std::string& repoPath, std::function<void()> task);
+    void runWrite(const std::string& repoPath, std::function<void()> task);
+
+private:
+    TaskObserver taskStartedCallback_;
+    TaskObserver taskFinishedCallback_;
 };
 
 }  // namespace ogc::application

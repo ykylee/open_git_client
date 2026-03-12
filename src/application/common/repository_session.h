@@ -3,30 +3,29 @@
 #include "application/common/task_coordinator.h"
 #include "domain/models.h"
 
-#include <QObject>
-#include <QString>
+#include <functional>
+#include <string>
 
 namespace ogc::application {
 
-class RepositorySession final : public QObject {
-    Q_OBJECT
-
+class RepositorySession final {
 public:
-    explicit RepositorySession(QString repoPath, QObject* parent = nullptr);
+    using SnapshotObserver = std::function<void()>;
 
-    [[nodiscard]] const QString& repoPath() const;
+    explicit RepositorySession(std::string repoPath);
+
+    [[nodiscard]] const std::string& repoPath() const;
     [[nodiscard]] const domain::RepositorySnapshot& snapshot() const;
     [[nodiscard]] TaskCoordinator& taskCoordinator();
 
     void setSnapshot(domain::RepositorySnapshot snapshot);
-
-signals:
-    void snapshotChanged();
+    void setSnapshotChangedCallback(SnapshotObserver callback);
 
 private:
-    QString repoPath_;
+    std::string repoPath_;
     domain::RepositorySnapshot snapshot_;
     TaskCoordinator taskCoordinator_;
+    SnapshotObserver snapshotChangedCallback_;
 };
 
 }  // namespace ogc::application

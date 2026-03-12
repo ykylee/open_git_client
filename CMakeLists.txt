@@ -17,13 +17,8 @@ set(OGC_PACKAGE_ROOT "${CMAKE_BINARY_DIR}/package/${OGC_PORTABLE_DIR_NAME}")
 set(OGC_DIST_DIR "${CMAKE_BINARY_DIR}/dist")
 set(OGC_PORTABLE_ARCHIVE "${OGC_DIST_DIR}/${OGC_PORTABLE_DIR_NAME}-${PROJECT_VERSION}-${CMAKE_SYSTEM_NAME}.zip")
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
-
-find_package(Qt6 6.4.2 REQUIRED COMPONENTS Widgets Test)
-
-qt_standard_project_setup()
+find_package(wxWidgets REQUIRED COMPONENTS core base)
+include("${wxWidgets_USE_FILE}")
 
 add_library(ogc_core STATIC
     src/app/application_bootstrap.cpp
@@ -39,12 +34,7 @@ target_include_directories(ogc_core
         src
 )
 
-target_link_libraries(ogc_core
-    PUBLIC
-        Qt6::Core
-)
-
-qt_add_executable(open_git_client
+add_executable(open_git_client
     src/app/main.cpp
     src/ui/main_window/main_window.cpp
 )
@@ -58,7 +48,7 @@ set_target_properties(open_git_client PROPERTIES
 target_link_libraries(open_git_client
     PRIVATE
         ogc_core
-        Qt6::Widgets
+        ${wxWidgets_LIBRARIES}
 )
 
 install(TARGETS open_git_client
@@ -67,54 +57,25 @@ install(TARGETS open_git_client
 )
 
 if(WIN32)
-    find_program(OGC_WINDEPLOYQT_EXECUTABLE
-        NAMES windeployqt windeployqt6
-        HINTS "${QT6_INSTALL_PREFIX}/${QT6_INSTALL_BINS}"
+    install(TARGETS open_git_client
+        RUNTIME_DEPENDENCY_SET ogc_runtime_dependencies
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
     )
 
-    if(NOT OGC_WINDEPLOYQT_EXECUTABLE)
-        message(FATAL_ERROR "windeployqt was not found. Check the Qt installation on this machine.")
-    endif()
-
-    add_custom_target(bundle_open_git_client
-        COMMAND "${CMAKE_COMMAND}" -E rm -rf "${CMAKE_BINARY_DIR}/package"
-        COMMAND "${CMAKE_COMMAND}" -E make_directory "${OGC_PACKAGE_ROOT}/bin"
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-            "$<TARGET_FILE:open_git_client>"
-            "${OGC_PACKAGE_ROOT}/bin/$<TARGET_FILE_NAME:open_git_client>"
-        COMMAND "${OGC_WINDEPLOYQT_EXECUTABLE}"
-            --dir "${OGC_PACKAGE_ROOT}/bin"
-            --no-translations
-            "${OGC_PACKAGE_ROOT}/bin/$<TARGET_FILE_NAME:open_git_client>"
-        DEPENDS open_git_client
-        USES_TERMINAL
-        COMMENT "Bundling deployable Open Git Client runtime into ${OGC_PACKAGE_ROOT}/bin"
-    )
-else()
-    if(Qt6_VERSION VERSION_LESS 6.5.0)
-        qt_generate_deploy_app_script(
-            TARGET open_git_client
-            FILENAME_VARIABLE open_git_client_deploy_script
-            NO_UNSUPPORTED_PLATFORM_ERROR
-        )
-    else()
-        qt_generate_deploy_app_script(
-            TARGET open_git_client
-            OUTPUT_SCRIPT open_git_client_deploy_script
-            NO_UNSUPPORTED_PLATFORM_ERROR
-        )
-    endif()
-
-    install(SCRIPT "${open_git_client_deploy_script}")
-
-    add_custom_target(bundle_open_git_client
-        COMMAND "${CMAKE_COMMAND}" -E rm -rf "${CMAKE_BINARY_DIR}/package"
-        COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --prefix "${OGC_PACKAGE_ROOT}"
-        DEPENDS open_git_client
-        USES_TERMINAL
-        COMMENT "Bundling deployable Open Git Client runtime into ${OGC_PACKAGE_ROOT}/bin"
+    install(RUNTIME_DEPENDENCY_SET ogc_runtime_dependencies
+        DESTINATION "${CMAKE_INSTALL_BINDIR}"
+        PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
+        POST_EXCLUDE_REGEXES ".*[Ss]ystem32/.*"
     )
 endif()
+
+add_custom_target(bundle_open_git_client
+    COMMAND "${CMAKE_COMMAND}" -E rm -rf "${CMAKE_BINARY_DIR}/package"
+    COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --prefix "${OGC_PACKAGE_ROOT}"
+    DEPENDS open_git_client
+    USES_TERMINAL
+    COMMENT "Bundling deployable Open Git Client runtime into ${OGC_PACKAGE_ROOT}/bin"
+)
 
 add_custom_target(package_open_git_client_portable
     COMMAND "${CMAKE_COMMAND}" -E rm -rf "${OGC_DIST_DIR}"
@@ -128,7 +89,7 @@ add_custom_target(package_open_git_client_portable
 
 enable_testing()
 
-qt_add_executable(task_coordinator_tests
+add_executable(task_coordinator_tests
     tests/unit/task_coordinator_test.cpp
 )
 
@@ -139,12 +100,11 @@ set_target_properties(task_coordinator_tests PROPERTIES
 target_link_libraries(task_coordinator_tests
     PRIVATE
         ogc_core
-        Qt6::Test
 )
 
 add_test(NAME task_coordinator_tests COMMAND task_coordinator_tests)
 
-qt_add_executable(repository_use_cases_tests
+add_executable(repository_use_cases_tests
     tests/unit/repository_use_cases_test.cpp
 )
 
@@ -155,7 +115,6 @@ set_target_properties(repository_use_cases_tests PROPERTIES
 target_link_libraries(repository_use_cases_tests
     PRIVATE
         ogc_core
-        Qt6::Test
 )
 
 add_test(NAME repository_use_cases_tests COMMAND repository_use_cases_tests)

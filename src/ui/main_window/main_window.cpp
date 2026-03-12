@@ -1,26 +1,51 @@
 #include "ui/main_window/main_window.h"
 
-#include <QAction>
-#include <QApplication>
-#include <QDir>
-#include <QHBoxLayout>
-#include <QHeaderView>
-#include <QLabel>
-#include <QListWidget>
-#include <QPlainTextEdit>
-#include <QSplitter>
-#include <QStatusBar>
-#include <QTabWidget>
-#include <QTextEdit>
-#include <QToolBar>
-#include <QTreeWidget>
-#include <QVBoxLayout>
-#include <QWidget>
+#include <wx/artprov.h>
+#include <wx/listbox.h>
+#include <wx/notebook.h>
+#include <wx/panel.h>
+#include <wx/sizer.h>
+#include <wx/splitter.h>
+#include <wx/stattext.h>
+#include <wx/textctrl.h>
+#include <wx/toolbar.h>
+#include <wx/treectrl.h>
+#include <wx/utils.h>
+
+#include <filesystem>
+#include <sstream>
 
 namespace ogc::ui {
 
-MainWindow::MainWindow(application::RepositoryUseCases& repositoryUseCases, QWidget* parent)
-    : QMainWindow(parent),
+namespace {
+
+wxString toWxString(const std::string& value) {
+    return wxString::FromUTF8(value);
+}
+
+std::string joinReferenceNames(const std::vector<domain::ReferenceLabel>& refs) {
+    std::ostringstream stream;
+    for (std::size_t index = 0; index < refs.size(); ++index) {
+        if (index > 0) {
+            stream << ", ";
+        }
+        stream << refs[index].name;
+    }
+    return stream.str();
+}
+
+enum class CommandId {
+    OpenRepository = wxID_HIGHEST + 1,
+    RefreshRepository,
+    Fetch,
+    Pull,
+    Push
+};
+
+}  // namespace
+
+MainWindow::MainWindow(application::RepositoryUseCases& repositoryUseCases)
+    : wxFrame(nullptr, wxID_ANY, "Open Git Client", wxDefaultPosition, wxSize(1440, 860)),
       repositoryUseCases_(repositoryUseCases) {
     setupUi();
     setupToolbar();
@@ -29,7 +54,9 @@ MainWindow::MainWindow(application::RepositoryUseCases& repositoryUseCases, QWid
 
 void MainWindow::openRepository() {
     activeSession_ = repositoryUseCases_.openRepository(defaultRepositoryPath());
-    connect(activeSession_.get(), &application::RepositorySession::snapshotChanged, this, &MainWindow::syncActiveSessionToUi);
+    activeSession_->setSnapshotChangedCallback([this]() {
+        syncActiveSessionToUi();
+    });
     syncActiveSessionToUi();
 }
 
@@ -48,156 +75,135 @@ void MainWindow::syncActiveSessionToUi() {
 
     const auto& snapshot = activeSession_->snapshot();
 
-    repositoryTitle_->setText(snapshot.summary.displayName);
-    repositoryStatus_->setText(
-        QString("%1 | branch %2 | refreshed %3")
-            .arg(snapshot.summary.repoPath, snapshot.summary.currentBranch, snapshot.state.lastRefreshAt));
+    repositoryTitle_->SetLabel(toWxString(snapshot.summary.displayName));
+    repositoryStatus_->SetLabel(
+        toWxString(snapshot.summary.repoPath + " | branch " + snapshot.summary.currentBranch +
+                   " | refreshed " + snapshot.state.lastRefreshAt));
 
-    repositoryList_->clear();
-    repositoryList_->addItem(snapshot.summary.displayName);
-    repositoryList_->addItem("Recent repositories");
-    repositoryList_->addItem("Workspace");
+    repositoryList_->Clear();
+    repositoryList_->Append(toWxString(snapshot.summary.displayName));
+    repositoryList_->Append("Recent repositories");
+    repositoryList_->Append("Workspace");
 
     populateGraph();
     populateWorkingTree();
     populateInspector();
 
-    statusBar()->showMessage("Repository session synchronized");
+    SetStatusText("Repository session synchronized");
 }
 
 void MainWindow::setupUi() {
-    setWindowTitle("Open Git Client");
-    resize(1440, 860);
+    auto* root = new wxSplitterWindow(this, wxID_ANY);
+    auto* sidebar = new wxPanel(root, wxID_ANY);
+    auto* mainPane = new wxSplitterWindow(root, wxID_ANY);
+    auto* detailPane = new wxSplitterWindow(mainPane, wxID_ANY);
 
-    auto* root = new QSplitter(this);
-    root->setOrientation(Qt::Horizontal);
-    setCentralWidget(root);
+    auto* sidebarSizer = new wxBoxSizer(wxVERTICAL);
+    repositoryTitle_ = new wxStaticText(sidebar, wxID_ANY, "No repository");
+    repositoryStatus_ = new wxStaticText(sidebar, wxID_ANY, "Open a repository session");
+    repositoryList_ = new wxListBox(sidebar, wxID_ANY);
 
-    auto* sidebar = new QWidget(root);
-    auto* sidebarLayout = new QVBoxLayout(sidebar);
-    sidebarLayout->setContentsMargins(12, 12, 12, 12);
-    sidebarLayout->setSpacing(8);
+    repositoryTitle_->SetFont(wxFontInfo(16).Bold());
+    sidebarSizer->Add(repositoryTitle_, 0, wxALL, 12);
+    sidebarSizer->Add(repositoryStatus_, 0, wxLEFT | wxRIGHT | wxBOTTOM | wxEXPAND, 12);
+    sidebarSizer->Add(repositoryList_, 1, wxALL | wxEXPAND, 12);
+    sidebar->SetSizer(sidebarSizer);
 
-    repositoryTitle_ = new QLabel("No repository", sidebar);
-    repositoryTitle_->setStyleSheet("font-size: 20px; font-weight: 700;");
-    repositoryStatus_ = new QLabel("Open a repository session", sidebar);
-    repositoryStatus_->setWordWrap(true);
-    repositoryList_ = new QListWidget(sidebar);
+    graphView_ = new wxTreeCtrl(
+        mainPane, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+        wxTR_HAS_BUTTONS | wxTR_LINES_AT_ROOT | wxTR_DEFAULT_STYLE);
 
-    sidebarLayout->addWidget(repositoryTitle_);
-    sidebarLayout->addWidget(repositoryStatus_);
-    sidebarLayout->addWidget(repositoryList_, 1);
+    auto* inspectorPanel = new wxPanel(detailPane, wxID_ANY);
+    auto* inspectorSizer = new wxBoxSizer(wxVERTICAL);
+    inspectorTabs_ = new wxNotebook(inspectorPanel, wxID_ANY);
+    inspectorDetails_ = new wxTextCtrl(
+        inspectorTabs_, wxID_ANY, "", wxDefaultPosition, wxDefaultSize,
+        wxTE_MULTILINE | wxTE_READONLY);
+    auto* historyPreview = new wxTextCtrl(
+        inspectorTabs_, wxID_ANY, "History and blame panes will attach here in Phase 2.",
+        wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
 
-    auto* mainPane = new QSplitter(root);
-    mainPane->setOrientation(Qt::Horizontal);
+    inspectorTabs_->AddPage(inspectorDetails_, "Inspector", true);
+    inspectorTabs_->AddPage(historyPreview, "History", false);
+    inspectorSizer->Add(inspectorTabs_, 1, wxEXPAND | wxALL, 0);
+    inspectorPanel->SetSizer(inspectorSizer);
 
-    graphView_ = new QTreeWidget(mainPane);
-    graphView_->setColumnCount(4);
-    graphView_->setHeaderLabels({"Graph", "Commit", "Author", "Refs"});
-    graphView_->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-    graphView_->header()->setSectionResizeMode(1, QHeaderView::Stretch);
-    graphView_->header()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
-    graphView_->header()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
+    workingTreeView_ = new wxTreeCtrl(
+        detailPane, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+        wxTR_HAS_BUTTONS | wxTR_LINES_AT_ROOT | wxTR_DEFAULT_STYLE);
 
-    auto* detailPane = new QSplitter(mainPane);
-    detailPane->setOrientation(Qt::Vertical);
+    detailPane->SplitHorizontally(inspectorPanel, workingTreeView_, 480);
+    mainPane->SplitVertically(graphView_, detailPane, 820);
+    root->SplitVertically(sidebar, mainPane, 280);
 
-    inspectorTabs_ = new QTabWidget(detailPane);
-    inspectorDetails_ = new QTextEdit(inspectorTabs_);
-    inspectorDetails_->setReadOnly(true);
-    inspectorTabs_->addTab(inspectorDetails_, "Inspector");
-
-    auto* historyPreview = new QPlainTextEdit(inspectorTabs_);
-    historyPreview->setReadOnly(true);
-    historyPreview->setPlainText("History and blame panes will attach here in Phase 2.");
-    inspectorTabs_->addTab(historyPreview, "History");
-
-    workingTreeView_ = new QTreeWidget(detailPane);
-    workingTreeView_->setColumnCount(4);
-    workingTreeView_->setHeaderLabels({"Path", "Status", "Staged", "Conflicted"});
-    workingTreeView_->header()->setSectionResizeMode(0, QHeaderView::Stretch);
-
-    root->addWidget(sidebar);
-    root->addWidget(mainPane);
-    root->setStretchFactor(0, 0);
-    root->setStretchFactor(1, 1);
-    mainPane->setStretchFactor(0, 3);
-    mainPane->setStretchFactor(1, 2);
-    detailPane->setStretchFactor(0, 3);
-    detailPane->setStretchFactor(1, 2);
+    CreateStatusBar();
 }
 
 void MainWindow::setupToolbar() {
-    auto* toolbar = addToolBar("Main");
-    toolbar->setMovable(false);
+    auto* toolbar = CreateToolBar(wxTB_HORIZONTAL | wxTB_FLAT | wxTB_TEXT);
+    toolbar->AddTool(static_cast<int>(CommandId::OpenRepository), "Open",
+                     wxArtProvider::GetBitmapBundle(wxART_FOLDER_OPEN, wxART_TOOLBAR));
+    toolbar->AddTool(static_cast<int>(CommandId::RefreshRepository), "Refresh",
+                     wxArtProvider::GetBitmapBundle(wxART_REDO, wxART_TOOLBAR));
+    toolbar->AddSeparator();
+    toolbar->AddTool(static_cast<int>(CommandId::Fetch), "Fetch",
+                     wxArtProvider::GetBitmapBundle(wxART_GO_DOWN, wxART_TOOLBAR));
+    toolbar->AddTool(static_cast<int>(CommandId::Pull), "Pull",
+                     wxArtProvider::GetBitmapBundle(wxART_GO_BACK, wxART_TOOLBAR));
+    toolbar->AddTool(static_cast<int>(CommandId::Push), "Push",
+                     wxArtProvider::GetBitmapBundle(wxART_GO_FORWARD, wxART_TOOLBAR));
+    toolbar->Realize();
 
-    auto* openAction = new QAction("Open", this);
-    auto* refreshAction = new QAction("Refresh", this);
-    auto* fetchAction = new QAction("Fetch", this);
-    auto* pullAction = new QAction("Pull", this);
-    auto* pushAction = new QAction("Push", this);
-
-    connect(openAction, &QAction::triggered, this, &MainWindow::openRepository);
-    connect(refreshAction, &QAction::triggered, this, &MainWindow::refreshActiveRepository);
-
-    toolbar->addAction(openAction);
-    toolbar->addAction(refreshAction);
-    toolbar->addSeparator();
-    toolbar->addAction(fetchAction);
-    toolbar->addAction(pullAction);
-    toolbar->addAction(pushAction);
+    Bind(wxEVT_TOOL, [this](wxCommandEvent&) { openRepository(); }, static_cast<int>(CommandId::OpenRepository));
+    Bind(wxEVT_TOOL, [this](wxCommandEvent&) { refreshActiveRepository(); },
+         static_cast<int>(CommandId::RefreshRepository));
 }
 
 void MainWindow::populateGraph() {
-    graphView_->clear();
+    graphView_->DeleteAllItems();
+    const auto root = graphView_->AddRoot("Commit Graph");
 
     const auto& graph = activeSession_->snapshot().graph;
     for (const auto& commit : graph) {
-        QStringList refs;
-        refs.reserve(static_cast<qsizetype>(commit.refs.size()));
-        for (const auto& ref : commit.refs) {
-            refs << ref.name;
-        }
-
-        auto* item = new QTreeWidgetItem(graphView_);
-        item->setText(0, QString("| %1").arg(commit.graphLane));
-        item->setText(1, QString("%1  %2").arg(commit.shortOid, commit.summary));
-        item->setText(2, commit.authorName);
-        item->setText(3, refs.join(", "));
+        const auto label =
+            "|" + std::to_string(commit.graphLane) + "  " + commit.shortOid + "  " + commit.summary;
+        const auto item = graphView_->AppendItem(root, toWxString(label));
+        graphView_->AppendItem(item, toWxString("Author: " + commit.authorName));
+        graphView_->AppendItem(item, toWxString("Refs: " + joinReferenceNames(commit.refs)));
     }
+
+    graphView_->ExpandAll();
 }
 
 void MainWindow::populateWorkingTree() {
-    workingTreeView_->clear();
+    workingTreeView_->DeleteAllItems();
+    const auto root = workingTreeView_->AddRoot("Working Tree");
 
     const auto& workingTree = activeSession_->snapshot().workingTree;
     for (const auto& file : workingTree) {
-        auto* item = new QTreeWidgetItem(workingTreeView_);
-        item->setText(0, file.path);
-        item->setText(1, file.gitStatus);
-        item->setText(2, file.hasStagedChanges ? "yes" : "no");
-        item->setText(3, file.isConflicted ? "yes" : "no");
+        const auto item = workingTreeView_->AppendItem(root, toWxString(file.path));
+        workingTreeView_->AppendItem(item, toWxString("Status: " + file.gitStatus));
+        workingTreeView_->AppendItem(item, file.hasStagedChanges ? "Staged: yes" : "Staged: no");
+        workingTreeView_->AppendItem(item, file.isConflicted ? "Conflicted: yes" : "Conflicted: no");
     }
+
+    workingTreeView_->ExpandAll();
 }
 
 void MainWindow::populateInspector() {
     const auto& snapshot = activeSession_->snapshot();
-    inspectorDetails_->setPlainText(
-        QString("RepositorySession\n"
-                "Path: %1\n"
-                "HEAD: %2\n"
-                "Commit: %3\n"
-                "Operation: %4\n"
-                "Working tree dirty: %5\n")
-            .arg(snapshot.summary.repoPath,
-                 snapshot.state.headRef,
-                 snapshot.state.headCommit,
-                 snapshot.state.currentOperation,
-                 snapshot.summary.hasUncommittedChanges ? "yes" : "no"));
+    const std::string details =
+        "RepositorySession\n"
+        "Path: " + snapshot.summary.repoPath + "\n"
+        "HEAD: " + snapshot.state.headRef + "\n"
+        "Commit: " + snapshot.state.headCommit + "\n"
+        "Operation: " + snapshot.state.currentOperation + "\n"
+        "Working tree dirty: " + std::string(snapshot.summary.hasUncommittedChanges ? "yes" : "no") + "\n";
+    inspectorDetails_->SetValue(toWxString(details));
 }
 
-QString MainWindow::defaultRepositoryPath() const {
-    return QDir::currentPath();
+std::string MainWindow::defaultRepositoryPath() const {
+    return std::filesystem::current_path().string();
 }
 
 }  // namespace ogc::ui
